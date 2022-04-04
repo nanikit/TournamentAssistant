@@ -115,23 +115,30 @@ namespace TournamentAssistant.UI.FlowCoordinators
             if (_currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.SuperFastSong)) songSpeed = GameplayModifiers.SongSpeed.SuperFast;
 
             var gameplayModifiers = new GameplayModifiers(
-                _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.DemoNoFail),
-                _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.DemoNoObstacles),
-                _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.BatteryEnergy) ? GameplayModifiers.EnergyType.Battery : GameplayModifiers.EnergyType.Bar,
-                _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.NoFail),
-                _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.InstaFail),
-                _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.FailOnClash),
-                _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.NoObstacles) ? GameplayModifiers.EnabledObstacleType.NoObstacles : GameplayModifiers.EnabledObstacleType.All,
-                _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.NoBombs),
-                _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.FastNotes),
-                _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.StrictAngles),
-                _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.DisappearingArrows),
-                songSpeed,
-                _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.NoArrows),
-                _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.GhostNotes),
-                _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.ProMode),
-                _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.ZenMode),
-                _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.SmallCubes)
+                noFailOn0Energy: _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.NoFail),
+                energyType: _currentParameters.GameplayModifiers.Options switch
+                {
+                    var options when options.HasFlag(GameOptions.BatteryEnergy) => GameplayModifiers.EnergyType.Battery,
+                    _ => GameplayModifiers.EnergyType.Bar,
+                },
+                instaFail: _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.InstaFail),
+                failOnSaberClash: _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.FailOnClash),
+                enabledObstacleType: _currentParameters.GameplayModifiers.Options switch
+                {
+                    var options when options.HasFlag(GameOptions.NoObstacles) => GameplayModifiers.EnabledObstacleType.NoObstacles,
+                    var options when options.HasFlag(GameOptions.DemoNoObstacles) => GameplayModifiers.EnabledObstacleType.FullHeightOnly,
+                    _ => GameplayModifiers.EnabledObstacleType.All,
+                },
+                noBombs: _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.NoBombs),
+                fastNotes: _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.FastNotes),
+                strictAngles: _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.StrictAngles),
+                disappearingArrows: _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.DisappearingArrows),
+                songSpeed: songSpeed,
+                noArrows: _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.NoArrows),
+                ghostNotes: _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.GhostNotes),
+                proMode: _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.ProMode),
+                zenMode: _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.ZenMode),
+                smallCubes: _currentParameters.GameplayModifiers.Options.HasFlag(GameOptions.SmallCubes)
             );
 
             var colorScheme = playerData.colorSchemesSettings.overrideDefaultColors ? playerData.colorSchemesSettings.GetSelectedColorScheme() : null;
@@ -148,11 +155,11 @@ namespace TournamentAssistant.UI.FlowCoordinators
 
             SongUtils.LoadSong(parameters.Beatmap.LevelId, (loadedLevel) =>
             {
-                PresentViewController(_songDetail, () =>
+                PresentViewController(_songDetail, async () =>
                 {
-                    _songDetail.SetSelectedSong(loadedLevel);
-                    _songDetail.SetSelectedDifficulty((int)parameters.Beatmap.Difficulty);
-                    _songDetail.SetSelectedCharacteristic(parameters.Beatmap.Characteristic.SerializedName);
+                    await _songDetail.SetSelectedSong(loadedLevel);
+                    await _songDetail.SetSelectedDifficulty((int)parameters.Beatmap.Difficulty);
+                    await _songDetail.SetSelectedCharacteristic(parameters.Beatmap.Characteristic.SerializedName);
 
                     if (_globalLeaderboard == null)
                     {
@@ -187,7 +194,7 @@ namespace TournamentAssistant.UI.FlowCoordinators
         {
             standardLevelScenesTransitionSetupData.didFinishEvent -= SongFinished;
 
-            var map = (standardLevelScenesTransitionSetupData.sceneSetupDataArray.First(x => x is GameplayCoreSceneSetupData) as GameplayCoreSceneSetupData).difficultyBeatmap;
+            var map = standardLevelScenesTransitionSetupData.difficultyBeatmap;
             var localPlayer = _playerDataModel.playerData;
             var localResults = localPlayer.GetPlayerLevelStatsData(map.level.levelID, map.difficulty, map.parentDifficultyBeatmapSet.beatmapCharacteristic);
             var highScore = localResults.highScore < results.modifiedScore;
@@ -200,14 +207,14 @@ namespace TournamentAssistant.UI.FlowCoordinators
                     PlayerUtils.GetPlatformUserData((username, userId) => SubmitScoreWhenResolved(username, userId, results));
 
                     _menuLightsManager.SetColorPreset(_scoreLights, true);
-                    _resultsViewController.Init(results, map, false, highScore);
+                    _resultsViewController.Init(results, standardLevelScenesTransitionSetupData.transformedBeatmapData, map, false, highScore);
                     _resultsViewController.continueButtonPressedEvent += ResultsViewController_continueButtonPressedEvent;
                     _resultsViewController.restartButtonPressedEvent += ResultsViewController_restartButtonPressedEvent;
                 }
                 else if (results.levelEndStateType == LevelCompletionResults.LevelEndStateType.Failed)
                 {
                     _menuLightsManager.SetColorPreset(_redLights, true);
-                    _resultsViewController.Init(results, map, false, highScore);
+                    _resultsViewController.Init(results, standardLevelScenesTransitionSetupData.transformedBeatmapData, map, false, highScore);
                     _resultsViewController.continueButtonPressedEvent += ResultsViewController_continueButtonPressedEvent;
                     _resultsViewController.restartButtonPressedEvent += ResultsViewController_restartButtonPressedEvent;
                 }

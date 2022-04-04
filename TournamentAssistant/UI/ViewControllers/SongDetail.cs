@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using TMPro;
 using TournamentAssistant.UI.FlowCoordinators;
 using TournamentAssistant.Utilities;
@@ -77,10 +78,10 @@ namespace TournamentAssistant.UI.ViewControllers
         [UIComponent("buttons-rect")]
         public RectTransform buttonsRect;
 
-        protected override void DidActivate(bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling)
+        protected override async void DidActivate(bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling)
         {
             base.DidActivate(firstActivation, addedToHierarchy, screenSystemEnabling);
-            if (RoomCoordinator.tempStat != null) SetSelectedSong(RoomCoordinator.tempStat);
+            if (RoomCoordinator.tempStat != null) await SetSelectedSong(RoomCoordinator.tempStat);
         }
 
         [UIAction("#post-parse")]
@@ -102,7 +103,7 @@ namespace TournamentAssistant.UI.ViewControllers
             maskImage.color = new Color(0f, 0f, 0f, 0.25f);
         }
 
-        public void SetControlData(IDifficultyBeatmapSet[] difficultyBeatmapSets, BeatmapCharacteristicSO selectedBeatmapCharacteristic)
+        public async Task SetControlData(IReadOnlyList<IDifficultyBeatmapSet> difficultyBeatmapSets, BeatmapCharacteristicSO selectedBeatmapCharacteristic)
         {
             _beatmapCharacteristics.Clear();
             var beatmapSetList = new List<IDifficultyBeatmapSet>(difficultyBeatmapSets);
@@ -114,10 +115,10 @@ namespace TournamentAssistant.UI.ViewControllers
 
             characteristicControl.SetData(itemArray);
             characteristicControl.SelectCellWithNumber(selectedIndex);
-            SetSelectedCharacteristic(null, selectedIndex);
+            await SetSelectedCharacteristic(null, selectedIndex);
         }
 
-        public void UpdateContent()
+        public async Task UpdateContent()
         {
             if (_selectedLevel != null)
             {
@@ -126,10 +127,11 @@ namespace TournamentAssistant.UI.ViewControllers
                 bpmText.text = Mathf.RoundToInt(_selectedLevel.beatsPerMinute).ToString();
                 if (_selectedDifficultyBeatmap != null)
                 {
-                    npsText.text = (_selectedDifficultyBeatmap.beatmapData.cuttableNotesCount / _selectedLevel.beatmapLevelData.audioClip.length).ToString("0.00");
-                    notesCountText.text = _selectedDifficultyBeatmap.beatmapData.cuttableNotesCount.ToString();
-                    obstaclesCountText.text = _selectedDifficultyBeatmap.beatmapData.obstaclesCount.ToString();
-                    bombsCountText.text = _selectedDifficultyBeatmap.beatmapData.bombsCount.ToString();
+                    var beatmapData = await _selectedDifficultyBeatmap.GetBeatmapDataBasicInfoAsync();
+                    npsText.text = (beatmapData.cuttableNotesCount / _selectedLevel.beatmapLevelData.audioClip.length).ToString("0.00");
+                    notesCountText.text = beatmapData.cuttableNotesCount.ToString();
+                    obstaclesCountText.text = beatmapData.obstaclesCount.ToString();
+                    bombsCountText.text = beatmapData.bombsCount.ToString();
                 }
                 else
                 {
@@ -141,7 +143,7 @@ namespace TournamentAssistant.UI.ViewControllers
             }
         }
 
-        public void SetSelectedSong(IBeatmapLevel selectedLevel)
+        public async Task SetSelectedSong(IBeatmapLevel selectedLevel)
         {
             buttonsRect.gameObject.SetActive(!DisablePlayButton);
 
@@ -149,39 +151,39 @@ namespace TournamentAssistant.UI.ViewControllers
             controlsRect.gameObject.SetActive(true);
             charactertisticControlBlocker.gameObject.SetActive(DisableCharacteristicControl);
             difficultyControlBlocker.gameObject.SetActive(DisableDifficultyControl);
-            SetBeatmapLevel(_selectedLevel);
+            await SetBeatmapLevel(_selectedLevel);
         }
 
-        private async void SetBeatmapLevel(IBeatmapLevel beatmapLevel)
+        private async Task SetBeatmapLevel(IBeatmapLevel beatmapLevel)
         {
             if (beatmapLevel.beatmapLevelData.difficultyBeatmapSets.Any(x => x.beatmapCharacteristic == _playerDataModel.playerData.lastSelectedBeatmapCharacteristic))
             {
                 _selectedDifficultyBeatmap = SongUtils.GetClosestDifficultyPreferLower(beatmapLevel, _playerDataModel.playerData.lastSelectedBeatmapDifficulty, _playerDataModel.playerData.lastSelectedBeatmapCharacteristic.serializedName);
             }
-            else if (beatmapLevel.beatmapLevelData.difficultyBeatmapSets.Length > 0)
+            else if (beatmapLevel.beatmapLevelData.difficultyBeatmapSets.Count > 0)
             {
                 _selectedDifficultyBeatmap = SongUtils.GetClosestDifficultyPreferLower(beatmapLevel, _playerDataModel.playerData.lastSelectedBeatmapDifficulty, "Standard");
             }
 
-            UpdateContent();
+            await UpdateContent();
 
             _playerDataModel.playerData.SetLastSelectedBeatmapCharacteristic(_selectedDifficultyBeatmap.parentDifficultyBeatmapSet.beatmapCharacteristic);
             _playerDataModel.playerData.SetLastSelectedBeatmapDifficulty(_selectedDifficultyBeatmap.difficulty);
 
-            SetControlData(_selectedLevel.beatmapLevelData.difficultyBeatmapSets, _playerDataModel.playerData.lastSelectedBeatmapCharacteristic);
+            await SetControlData(_selectedLevel.beatmapLevelData.difficultyBeatmapSets, _playerDataModel.playerData.lastSelectedBeatmapCharacteristic);
 
             levelCoverImage.texture = (await beatmapLevel.GetCoverImageAsync(cancellationToken.Token)).texture;
         }
 
-        public void SetSelectedCharacteristic(string serializedName)
+        public async Task SetSelectedCharacteristic(string serializedName)
         {
             var characteristicIndex = _beatmapCharacteristics.FindIndex(x => x.serializedName == serializedName);
             characteristicControl.SelectCellWithNumber(characteristicIndex);
-            SetSelectedCharacteristic(null, characteristicIndex);
+            await SetSelectedCharacteristic(null, characteristicIndex);
         }
 
         [UIAction("characteristic-selected")]
-        public void SetSelectedCharacteristic(IconSegmentedControl _, int index)
+        public async Task SetSelectedCharacteristic(IconSegmentedControl _, int index)
         {
             _playerDataModel.playerData.SetLastSelectedBeatmapCharacteristic(_beatmapCharacteristics[index]);
 
@@ -191,11 +193,11 @@ namespace TournamentAssistant.UI.ViewControllers
             var extraData = Collections.RetrieveExtraSongData(Collections.hashForLevelID(_selectedLevel.levelID));
             if (extraData != null)
             {
-                string[] difficultyLabels = new string[diffBeatmaps.Length];
+                string[] difficultyLabels = new string[diffBeatmaps.Count()];
 
                 var extraDifficulties = extraData._difficulties.Where(x => x._beatmapCharacteristicName == _beatmapCharacteristics[index].serializedName || x._beatmapCharacteristicName == _beatmapCharacteristics[index].characteristicNameLocalizationKey);
 
-                for (int i = 0; i < diffBeatmaps.Length; i++)
+                for (int i = 0; i < diffBeatmaps.Count(); i++)
                 {
                     var customDiff = extraDifficulties.FirstOrDefault(x => x._difficulty == diffBeatmaps[i].difficulty);
                     if (customDiff != null && !string.IsNullOrEmpty(customDiff._difficultyLabel)) difficultyLabels[i] = customDiff._difficultyLabel;
@@ -206,42 +208,51 @@ namespace TournamentAssistant.UI.ViewControllers
             }
             else difficultyControl.SetTexts(diffBeatmaps.Select(x => x.difficulty.ToString().Replace("Plus", "+")).ToArray());
 
-            var diffIndex = Array.FindIndex(diffBeatmaps, x => x.difficulty == closestDifficulty.difficulty);
+            var diffIndex = diffBeatmaps.Select((f, i) => new { Field = f, Index = i })
+                .Where(x => x.Field.difficulty == closestDifficulty.difficulty)
+                .Select(x => x.Index)
+                .DefaultIfEmpty(-1)
+                .First();
+            var a = new int[3];
+            var s = (a as IReadOnlyList<int>).Count;
 
             difficultyControl.SelectCellWithNumber(diffIndex);
-            SetSelectedDifficulty(null, diffIndex);
+            await SetSelectedDifficulty(null, diffIndex);
         }
 
-        public void SetSelectedDifficulty(int difficulty)
+        private int FindIndexOfList<T>(IReadOnlyList<T> items, Func<T, bool> predicate)
         {
-            var difficultyIndex = Array.FindIndex(
-                    _selectedLevel
-                        .beatmapLevelData
-                        .GetDifficultyBeatmapSet(
-                            _playerDataModel
-                                .playerData
-                                .lastSelectedBeatmapCharacteristic
-                        )
-                        .difficultyBeatmaps,
-                    x => x.difficulty == (BeatmapDifficulty)difficulty
-                );
+            return items.Select((value, index) => (Value: value, Index: index))
+                            .Where(x => predicate(x.Value))
+                            .Select(x => x.Index)
+                            .DefaultIfEmpty(-1)
+                            .First();
+        }
+
+        public async Task SetSelectedDifficulty(int difficulty)
+        {
+            var beatmaps = _selectedLevel.beatmapLevelData.GetDifficultyBeatmapSet(
+                _playerDataModel.playerData.lastSelectedBeatmapCharacteristic
+           ).difficultyBeatmaps;
+            var difficultyIndex = FindIndexOfList(beatmaps, x => x.difficulty == (BeatmapDifficulty)difficulty);
             difficultyControl.SelectCellWithNumber(difficultyIndex);
-            SetSelectedDifficulty(null, difficultyIndex);
+            await SetSelectedDifficulty(null, difficultyIndex);
         }
 
         [UIAction("difficulty-selected")]
-        public void SetSelectedDifficulty(TextSegmentedControl _, int index)
+        public async Task SetSelectedDifficulty(TextSegmentedControl _, int index)
         {
             var difficultyBeatmaps = _selectedLevel.beatmapLevelData.GetDifficultyBeatmapSet(_playerDataModel.playerData.lastSelectedBeatmapCharacteristic).difficultyBeatmaps;
 
-            if (index >= 0 && index < difficultyBeatmaps.Length)
+            if (index >= 0 && index < difficultyBeatmaps.Count)
             {
-                _selectedDifficultyBeatmap = difficultyBeatmaps[index];
+                var difficulty = difficultyBeatmaps[index];
+                _selectedDifficultyBeatmap = difficulty;
                 _playerDataModel.playerData.SetLastSelectedBeatmapDifficulty(_selectedDifficultyBeatmap.difficulty);
 
-                UpdateContent();
+                await UpdateContent();
 
-                DifficultyBeatmapChanged?.Invoke(_selectedDifficultyBeatmap);
+                DifficultyBeatmapChanged?.Invoke(difficulty);
             }
         }
 

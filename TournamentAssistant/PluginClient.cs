@@ -67,23 +67,30 @@ namespace TournamentAssistant
                 if (playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.SuperFastSong)) songSpeed = GameplayModifiers.SongSpeed.SuperFast;
 
                 var gameplayModifiers = new GameplayModifiers(
-                    playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.DemoNoFail),
-                    playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.DemoNoObstacles),
-                    playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.BatteryEnergy) ? GameplayModifiers.EnergyType.Battery : GameplayModifiers.EnergyType.Bar,
-                    playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.NoFail),
-                    playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.InstaFail),
-                    playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.FailOnClash),
-                    playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.NoObstacles) ? GameplayModifiers.EnabledObstacleType.NoObstacles : GameplayModifiers.EnabledObstacleType.All,
-                    playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.NoBombs),
-                    playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.FastNotes),
-                    playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.StrictAngles),
-                    playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.DisappearingArrows),
-                    songSpeed,
-                    playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.NoArrows),
-                    playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.GhostNotes),
-                    playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.ProMode),
-                    playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.ZenMode),
-                    playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.SmallCubes)
+                    noFailOn0Energy: playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.NoFail),
+                    energyType: playSong.GameplayParameters.GameplayModifiers.Options switch
+                    {
+                        var options when options.HasFlag(GameOptions.BatteryEnergy) => GameplayModifiers.EnergyType.Battery,
+                        _ => GameplayModifiers.EnergyType.Bar,
+                    },
+                    instaFail: playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.InstaFail),
+                    failOnSaberClash: playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.FailOnClash),
+                    enabledObstacleType: playSong.GameplayParameters.GameplayModifiers.Options switch
+                    {
+                        var options when options.HasFlag(GameOptions.NoObstacles) => GameplayModifiers.EnabledObstacleType.NoObstacles,
+                        var options when options.HasFlag(GameOptions.DemoNoObstacles) => GameplayModifiers.EnabledObstacleType.FullHeightOnly,
+                        _ => GameplayModifiers.EnabledObstacleType.All,
+                    },
+                    noBombs: playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.NoBombs),
+                    fastNotes: playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.FastNotes),
+                    strictAngles: playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.StrictAngles),
+                    disappearingArrows: playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.DisappearingArrows),
+                    songSpeed: songSpeed,
+                    noArrows: playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.NoArrows),
+                    ghostNotes: playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.GhostNotes),
+                    proMode: playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.ProMode),
+                    zenMode: playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.ZenMode),
+                    smallCubes: playSong.GameplayParameters.GameplayModifiers.Options.HasFlag(GameOptions.SmallCubes)
                 );
 
                 var colorScheme = playerData.colorSchemesSettings.overrideDefaultColors ? playerData.colorSchemesSettings.GetSelectedColorScheme() : null;

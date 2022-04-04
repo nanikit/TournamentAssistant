@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BS_Utils.Utilities;
+using System;
 using System.Collections;
 using System.Linq;
 using TournamentAssistant.UI.FlowCoordinators;
@@ -20,6 +21,7 @@ namespace TournamentAssistant.Behaviors
         private Guid[] destinationPlayers;
 
         private int _lastUpdateScore = 0;
+        private int _lastCombo = 0;
         private int _scoreUpdateFrequency = Plugin.client.State.ServerSettings.ScoreUpdateFrequency;
         private int _scoreCheckDelay = 0;
         private int _notesMissed = 0;
@@ -34,23 +36,6 @@ namespace TournamentAssistant.Behaviors
                                      //load from destroying it
 
             StartCoroutine(WaitForComponentCreation());
-        }
-        
-        public void Update()
-        {
-            if (_scoreCheckDelay > _scoreUpdateFrequency)
-            {
-                _scoreCheckDelay = 0;
-            
-                if (_scoreController != null && (_scoreController.prevFrameModifiedScore != _lastUpdateScore || _notesMissed != _lastUpdateNotesMissed))
-                {
-                    _lastUpdateScore = _scoreController.prevFrameModifiedScore;
-                    _lastUpdateNotesMissed = _notesMissed;
-            
-                    ScoreUpdated(_scoreController.prevFrameModifiedScore, _scoreController.GetField<int>("_combo"), (float)_scoreController.prevFrameModifiedScore / _scoreController.immediateMaxPossibleRawScore, _audioTimeSyncController.songTime, _notesMissed);
-                }
-            }
-            _scoreCheckDelay++;
         }
 
         private void ScoreUpdated(int score, int combo, float accuracy, float time, int notesMissed)
@@ -84,8 +69,30 @@ namespace TournamentAssistant.Behaviors
             yield return new WaitUntil(() => Resources.FindObjectsOfTypeAll<AudioTimeSyncController>().Any());
             _scoreController = Resources.FindObjectsOfTypeAll<ScoreController>().First();
             _audioTimeSyncController = Resources.FindObjectsOfTypeAll<AudioTimeSyncController>().First();
-            _scoreController.noteWasMissedEvent += HandleNoteMissed;
-            _scoreController.noteWasCutEvent += HandleNoteCut;
+
+            _scoreController.scoringForNoteFinishedEvent += HandleNote;
+            BSEvents.comboDidChange += ReflectBsComboDidChange;
+            _scoreController.scoreDidChangeEvent += ReflectScore;
+        }
+
+        private void ReflectScore(int multipliedScore, int modifiedScore)
+        {
+            _lastUpdateScore = modifiedScore;
+            ScoreUpdated(_scoreController.modifiedScore, _lastCombo, (float)_scoreController.multipliedScore / _scoreController.immediateMaxPossibleMultipliedScore, _audioTimeSyncController.songTime, _notesMissed);
+        }
+
+        private void ReflectBsComboDidChange(int combo)
+        {
+            _lastCombo = combo;
+            ScoreUpdated(_scoreController.modifiedScore, _lastCombo, (float)_scoreController.multipliedScore / _scoreController.immediateMaxPossibleMultipliedScore, _audioTimeSyncController.songTime, _notesMissed);
+        }
+
+        private void HandleNote(ScoringElement scoring)
+        {
+            if (scoring.cutScore == 0)
+            {
+                _notesMissed++;
+            }
         }
 
         public void HandleNoteMissed(NoteData data, int something)
@@ -108,8 +115,7 @@ namespace TournamentAssistant.Behaviors
 
         void OnDestroy()
         {
-            _scoreController.noteWasMissedEvent -= HandleNoteMissed;
-            _scoreController.noteWasCutEvent -= HandleNoteCut;
+            _scoreController.scoringForNoteFinishedEvent -= HandleNote;
             Instance = null;
         }
     }

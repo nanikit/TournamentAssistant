@@ -218,16 +218,16 @@ namespace TournamentAssistant.UI.FlowCoordinators
         private void SongSelection_SongSelected(string levelId)
         {
             //Load the song, then display the detail info
-            SongUtils.LoadSong(levelId, (loadedLevel) =>
+            SongUtils.LoadSong(levelId, async (loadedLevel) =>
             {
                 if (!_songDetail.isInViewControllerHierarchy)
                 {
-                    PresentViewController(_songDetail, () =>
+                    PresentViewController(_songDetail, async () =>
                     {
                         _songDetail.DisableCharacteristicControl = !isHost;
                         _songDetail.DisableDifficultyControl = !isHost;
                         _songDetail.DisablePlayButton = !isHost;
-                        _songDetail.SetSelectedSong(loadedLevel);
+                        await _songDetail.SetSelectedSong(loadedLevel);
 
                         tempStat = loadedLevel;
                     });
@@ -237,7 +237,7 @@ namespace TournamentAssistant.UI.FlowCoordinators
                     _songDetail.DisableCharacteristicControl = !isHost;
                     _songDetail.DisableDifficultyControl = !isHost;
                     _songDetail.DisablePlayButton = !isHost;
-                    _songDetail.SetSelectedSong(loadedLevel);
+                    await _songDetail.SetSelectedSong(loadedLevel);
                 }
 
                 //Tell the other players to download the song, if we're host
@@ -365,7 +365,7 @@ namespace TournamentAssistant.UI.FlowCoordinators
                 }
                 else if (!isHost && _songDetail && _songDetail.isInViewControllerHierarchy && match.SelectedLevel != null && match.SelectedCharacteristic != null)
                 {
-                    UnityMainThreadDispatcher.Instance().Enqueue(() =>
+                    UnityMainThreadDispatcher.Instance().Enqueue(async () =>
                     {
                         //`CurrentlySelectedDifficulty` is reset by SetSelectedCharacteristic, so we save it here
                         //Usually this is intended behavior so that a new difficulty is selected
@@ -375,8 +375,8 @@ namespace TournamentAssistant.UI.FlowCoordinators
                         //characteristic, if the coordinator/leader hasn't messed up, and often changes simultaneously
                         var selectedDifficulty = (int)match.SelectedDifficulty;
 
-                        _songDetail.SetSelectedCharacteristic(match.SelectedCharacteristic.SerializedName);
-                        _songDetail.SetSelectedDifficulty(selectedDifficulty);
+                        await _songDetail.SetSelectedCharacteristic(match.SelectedCharacteristic.SerializedName);
+                        await _songDetail.SetSelectedDifficulty(selectedDifficulty);
                     });
                 }
             }
@@ -461,7 +461,7 @@ namespace TournamentAssistant.UI.FlowCoordinators
         {
             standardLevelScenesTransitionSetupData.didFinishEvent -= SongFinished;
 
-            var map = (standardLevelScenesTransitionSetupData.sceneSetupDataArray.First(x => x is GameplayCoreSceneSetupData) as GameplayCoreSceneSetupData).difficultyBeatmap;
+            var map = standardLevelScenesTransitionSetupData.difficultyBeatmap;
             var localPlayer = _playerDataModel.playerData;
             var localResults = localPlayer.GetPlayerLevelStatsData(map.level.levelID, map.difficulty, map.parentDifficultyBeatmapSet.beatmapCharacteristic);
             var highScore = localResults.highScore < results.modifiedScore;
@@ -502,7 +502,7 @@ namespace TournamentAssistant.UI.FlowCoordinators
             if (results.levelEndStateType != LevelCompletionResults.LevelEndStateType.Incomplete)
             {
                 _menuLightsManager.SetColorPreset(_scoreLights, true);
-                _resultsViewController.Init(results, map, false, highScore);
+                _resultsViewController.Init(results, standardLevelScenesTransitionSetupData.transformedBeatmapData, map, false, highScore);
                 _resultsViewController.GetField<Button>("_restartButton").gameObject.SetActive(false);
                 _resultsViewController.continueButtonPressedEvent += ResultsViewController_continueButtonPressedEvent;
                 PresentViewController(_resultsViewController, immediately: true);

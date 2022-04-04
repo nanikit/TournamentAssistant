@@ -169,18 +169,19 @@ namespace TournamentAssistant.Utilities
             {
                 MenuTransitionsHelper _menuSceneSetupData = Resources.FindObjectsOfTypeAll<MenuTransitionsHelper>().First();
                 _menuSceneSetupData.StartStandardLevel(
-                    "Solo",
-                    loadedLevel.beatmapLevelData.GetDifficultyBeatmap(characteristic, difficulty),
-                    loadedLevel,
-                    overrideEnvironmentSettings,
-                    colorScheme,
-                    gameplayModifiers ?? new GameplayModifiers(),
-                    playerSettings ?? new PlayerSpecificSettings(),
-                    null,
-                    "Menu",
-                    false,
-                    null,
-                    (standardLevelScenesTransitionSetupData, results) => songFinishedCallback?.Invoke(standardLevelScenesTransitionSetupData, results)
+                    gameMode: "Solo",
+                    difficultyBeatmap: loadedLevel.beatmapLevelData.GetDifficultyBeatmap(characteristic, difficulty),
+                    previewBeatmapLevel: loadedLevel,
+                    overrideEnvironmentSettings: overrideEnvironmentSettings,
+                    overrideColorScheme: colorScheme,
+                    gameplayModifiers: gameplayModifiers ?? new GameplayModifiers(),
+                    playerSpecificSettings: playerSettings ?? new PlayerSpecificSettings(),
+                    practiceSettings: null,
+                    backButtonText: "Menu",
+                    useTestNoteCutSoundEffects: false,
+                    startPaused: false,
+                    beforeSceneSwitchCallback: null,
+                    levelFinishedCallback: (standardLevelScenesTransitionSetupData, results) => songFinishedCallback?.Invoke(standardLevelScenesTransitionSetupData, results)
                 );
             };
 
