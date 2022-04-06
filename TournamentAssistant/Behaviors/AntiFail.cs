@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Linq;
 using TournamentAssistant.Utilities;
 using TournamentAssistantShared;
@@ -21,7 +22,7 @@ namespace TournamentAssistant.Behaviors
         private BeatmapObjectManager beatmapObjectManager;
 
         private float _nextFrameEnergyChange;
-        private float _oldObstacleEnergyDrainPerSecond;
+        private float _oldObstacleEnergyDrainPerSecond = 1.3f;
         private bool _wouldHaveFailed = false;
 
         void Awake()
@@ -66,8 +67,8 @@ namespace TournamentAssistant.Behaviors
             gameEnergyCounter = Resources.FindObjectsOfTypeAll<GameEnergyCounter>().First();
 
             //Prevent the gameEnergyCounter from invoking death by obstacle
-            _oldObstacleEnergyDrainPerSecond = gameEnergyCounter.GetField<float>("_obstacleEnergyDrainPerSecond");
-            gameEnergyCounter.SetField("_obstacleEnergyDrainPerSecond", 0f);
+            var eventInfo = gameEnergyCounter.GetType().GetEvent(nameof(gameEnergyCounter.gameEnergyDidReach0Event));
+            standardLevelGameplayManager.SetField("_initData", new StandardLevelGameplayManager.InitData(false));
 
             //Unhook the functions in the energy counter that watch note events, so we can peek inside the process
             beatmapObjectManager = gameEnergyCounter.GetField<BeatmapObjectManager>("_beatmapObjectManager");
@@ -87,10 +88,10 @@ namespace TournamentAssistant.Behaviors
         {
             if (noteController.noteData.colorType == ColorType.None)
             {
-                _nextFrameEnergyChange -= gameEnergyCounter.GetField<float>("_hitBombEnergyDrain");
+                _nextFrameEnergyChange -= gameEnergyCounter.GetField<float>("kHitBombEnergyDrain");
                 return;
             }
-            _nextFrameEnergyChange += (noteCutInfo.allIsOK ? gameEnergyCounter.GetField<float>("_goodNoteEnergyCharge") : (-gameEnergyCounter.GetField<float>("_badNoteEnergyDrain")));
+            _nextFrameEnergyChange += (noteCutInfo.allIsOK ? gameEnergyCounter.GetField<float>("kGoodNoteEnergyCharge") : (-gameEnergyCounter.GetField<float>("kBadNoteEnergyDrain")));
         }
 
         private void beatmapObjectManager_noteWasMissedEvent(NoteController noteController)
@@ -99,7 +100,9 @@ namespace TournamentAssistant.Behaviors
             {
                 return;
             }
-            _nextFrameEnergyChange -= gameEnergyCounter.GetField<float>("_missNoteEnergyDrain");
+
+            var energy = _nextFrameEnergyChange;
+            _nextFrameEnergyChange -= gameEnergyCounter.GetField<float>("kMissNoteEnergyDrain");
         }
 
         //Our custom AddEnergy will pass along the info to the gameEnergyCounter's AddEnergy UNLESS we would have failed, in which case we withhold that information until the end of the level
@@ -121,7 +124,7 @@ namespace TournamentAssistant.Behaviors
                     }
                     else if (gameEnergyCounter.energyType == GameplayModifiers.EnergyType.Battery)
                     {
-                        currentEnergy -= 1f / (float)gameEnergyCounter.GetField<float>("_batteryLives");
+                        currentEnergy -= 1f / (float)gameEnergyCounter.GetField<float>("kBatteryLives");
                     }
                     else
                     {
@@ -141,8 +144,7 @@ namespace TournamentAssistant.Behaviors
         private void gameSongController_songDidFinishEvent()
         {
             //Reset the gameEnergyCounter death by obstacle value
-            _oldObstacleEnergyDrainPerSecond = gameEnergyCounter.GetField<float>("_obstacleEnergyDrainPerSecond");
-            gameEnergyCounter.SetField("_obstacleEnergyDrainPerSecond", 0f);
+            standardLevelGameplayManager.SetField("_initData", new StandardLevelGameplayManager.InitData(true));
 
             //Rehook the functions in the energy counter that watch note events
             beatmapObjectManager = gameEnergyCounter.GetField<BeatmapObjectManager>("_beatmapObjectManager");
