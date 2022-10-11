@@ -278,14 +278,14 @@ namespace TournamentAssistantCore
                 Logger.Info("Reaching out to other hosts for updated Master Lists...");
 
                 //Commented out is the code that makes this act as a mesh network
-                //var hostStatePairs = await HostScraper.ScrapeHosts(State.KnownHosts, settings.ServerName, 0, core);
+                var hostStatePairs = await HostScraper.ScrapeHosts(State.KnownHosts.ToArray(), settings.ServerName, 0, core);
 
                 //The uncommented duplicate here makes this act as a hub and spoke network, since MasterServer is the domain of the master server
-                var hostStatePairs = await HostScraper.ScrapeHosts(
-                    State.KnownHosts.Where(x => x.Address.Contains(MASTER_SERVER)).ToArray(),
-                    settings.ServerName,
-                    0,
-                    core);
+                //var hostStatePairs = await HostScraper.ScrapeHosts(
+                //    State.KnownHosts.Where(x => x.Address.Contains(MASTER_SERVER)).ToArray(),
+                //    settings.ServerName,
+                //    0,
+                //    core);
 
                 hostStatePairs = hostStatePairs.Where(x => x.Value != null).ToDictionary(x => x.Key, x => x.Value);
                 var newHostList = hostStatePairs.Values.Where(x => x.KnownHosts != null).SelectMany(x => x.KnownHosts).Union(hostStatePairs.Keys, new CoreServerEqualityComparer());
@@ -314,14 +314,6 @@ namespace TournamentAssistantCore
                 server.ClientConnected += Server_ClientConnected;
                 server.ClientDisconnected += Server_ClientDisconnected;
                 server.Start();
-
-                //Start a regular check for updates
-                Update.PollForUpdates(() =>
-                {
-                    server.Shutdown();
-                    //SystemHost.MainThreadStop.Set(); //Release the main thread, so we don't leave behind threads
-                    Environment.Exit(0);
-                }, updateCheckToken.Token);
             }
 
             //Verify that the provided address points to our server
@@ -1107,7 +1099,7 @@ namespace TournamentAssistantCore
 
                         var scoreRequestResponse = new Response.LeaderboardScores();
                         scoreRequestResponse.Scores.AddRange(hideScores ? new LeaderboardScore[] { } : newScores.ToArray());
-                        
+
                         await Send(user.id, new Packet
                         {
                             Response = new Response
