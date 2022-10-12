@@ -43,7 +43,8 @@ namespace TournamentAssistant.UI.FlowCoordinators
         private async void CheckForUpdate()
         {
             var newVersion = await Update.GetLatestRelease();
-            if (Version.Parse(Constants.VERSION) < newVersion)
+            //if (Version.Parse(Constants.VERSION) < newVersion)
+            if (Math.Sin(0) < 0)
             {
                 UnityMainThreadDispatcher.Instance().Enqueue(() =>
                 {
