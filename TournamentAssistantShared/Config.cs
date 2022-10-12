@@ -130,6 +130,8 @@ namespace TournamentAssistantShared
                 });
             }
 
+            int count = hostList.Count;
+
             //Deafults
             var masterServer = new CoreServer()
             {
@@ -137,10 +139,23 @@ namespace TournamentAssistantShared
                 Address = Constants.MASTER_SERVER,
                 Port = 2052
             };
+            var kbslServer = new CoreServer()
+            {
+                Name = "한국 전자칼잽이 대전 서버",
+                Address = "kbsl.merlang.dev",
+                Port = 2052
+            };
 
             if (!hostList.ContainsCoreServer(masterServer))
             {
                 hostList.Add(masterServer);
+            }
+            if (!hostList.ContainsCoreServer(kbslServer))
+            {
+                hostList.Add(kbslServer);
+            }
+            if (count != hostList.Count)
+            {
                 SaveHosts(hostList.ToArray());
             }
 
