@@ -1,9 +1,11 @@
-﻿using SongCore;
+﻿using ModestTree;
+using SongCore;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using TournamentAssistantShared;
@@ -175,7 +177,7 @@ new Pack
             Action<IBeatmapLevel> SongLoaded = (loadedLevel) =>
             {
                 MenuTransitionsHelper _menuSceneSetupData = Resources.FindObjectsOfTypeAll<MenuTransitionsHelper>().First();
-                _menuSceneSetupData.StartStandardLevel(
+                var arguments = new List<object> {
                     "Solo",
                     loadedLevel.beatmapLevelData.GetDifficultyBeatmap(characteristic, difficulty),
                     loadedLevel,
@@ -188,9 +190,31 @@ new Pack
                     false,
                     false,  /* TODO: start paused? Worth looking into to replace the old hacky function */
                     null,
-                    (standardLevelScenesTransitionSetupData, results) => songFinishedCallback?.Invoke(standardLevelScenesTransitionSetupData, results),
-                    null
-                );
+                    (StandardLevelScenesTransitionSetupDataSO standardLevelScenesTransitionSetupData, LevelCompletionResults results) => songFinishedCallback?.Invoke(standardLevelScenesTransitionSetupData, results),
+                };
+                var methods = _menuSceneSetupData.GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public);
+                var method = methods.Where(x => x.Name == "StartStandardLevel").OrderBy(x => x.GetParameters().Length).First();
+                if (method.GetParameters().Length == 14)
+                {
+                    arguments.Add(null);
+                }
+                method.Invoke(_menuSceneSetupData, arguments.ToArray());
+                //_menuSceneSetupData.StartStandardLevel(
+                //    "Solo",
+                //    loadedLevel.beatmapLevelData.GetDifficultyBeatmap(characteristic, difficulty),
+                //    loadedLevel,
+                //    overrideEnvironmentSettings,
+                //    colorScheme,
+                //    gameplayModifiers ?? new GameplayModifiers(),
+                //    playerSettings ?? new PlayerSpecificSettings(),
+                //    null,
+                //    "Menu",
+                //    false,
+                //    false,  /* TODO: start paused? Worth looking into to replace the old hacky function */
+                //    null,
+                //    (standardLevelScenesTransitionSetupData, results) => songFinishedCallback?.Invoke(standardLevelScenesTransitionSetupData, results),
+                //    null
+                //);
             };
 
             if ((level is PreviewBeatmapLevelSO && await HasDLCLevel(level.levelID)) ||
