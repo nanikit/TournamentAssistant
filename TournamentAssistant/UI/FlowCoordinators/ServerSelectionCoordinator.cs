@@ -22,7 +22,7 @@ namespace TournamentAssistant.UI.FlowCoordinators
             {
                 //Set up UI
                 SetTitle("Server Selection", ViewController.AnimationType.None);
-                showBackButton = false;
+                showBackButton = true;
                 _IPConnectionViewController = BeatSaberUI.CreateViewController<IPConnection>();
                 _patchNotesViewController = BeatSaberUI.CreateViewController<PatchNotes>();
 
