@@ -141,8 +141,8 @@ namespace TournamentAssistantShared
             };
             var kbslServer = new CoreServer()
             {
-                Name = "한국 전자칼잽이 대전 서버",
-                Address = "kbsl.merlang.dev",
+                Name = "전자칼잽이 대전 서버",
+                Address = "bsck.merlang.dev",
                 Port = 2052
             };
 
@@ -152,7 +152,7 @@ namespace TournamentAssistantShared
             }
             if (!hostList.ContainsCoreServer(kbslServer))
             {
-                hostList.Add(kbslServer);
+                hostList.Insert(0, kbslServer);
             }
             if (count != hostList.Count)
             {
