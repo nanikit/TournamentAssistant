@@ -1,3 +1,4 @@
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -240,45 +241,29 @@ namespace TournamentAssistantShared
         static string LogPacket(Packet packet)
         {
             string secondaryInfo = string.Empty;
-            if (packet.packetCase == Packet.packetOneofCase.Command)
+            switch (packet.packetCase)
             {
-                var command = packet.Command;
-                if (command.TypeCase == Command.TypeOneofCase.play_song)
-                {
-                    var playSong = command.play_song;
-                    secondaryInfo = playSong.GameplayParameters.Beatmap.LevelId + " : " +
-                                    playSong.GameplayParameters.Beatmap.Difficulty;
-                }
-                else if (command.TypeCase == Command.TypeOneofCase.load_song)
-                {
-                    var loadSong = command.load_song;
-                    secondaryInfo = loadSong.LevelId;
-                }
-                else
-                {
-                    secondaryInfo = command.TypeCase.ToString();
-                }
+                case Packet.packetOneofCase.Command:
+                    secondaryInfo = JsonConvert.SerializeObject(packet.Command);
+                    break;
+                case Packet.packetOneofCase.Event:
+                    secondaryInfo = JsonConvert.SerializeObject(packet.Event);
+                    break;
+                case Packet.packetOneofCase.Request:
+                    secondaryInfo = JsonConvert.SerializeObject(packet.Request);
+                    break;
+                case Packet.packetOneofCase.Response:
+                    secondaryInfo = JsonConvert.SerializeObject(packet.Response);
+                    break;
+                case Packet.packetOneofCase.ForwardingPacket:
+                    secondaryInfo = JsonConvert.SerializeObject(packet.ForwardingPacket);
+                    break;
+                case Packet.packetOneofCase.Push:
+                    secondaryInfo = JsonConvert.SerializeObject(packet.Push);
+                    break;
             }
 
-            if (packet.packetCase == Packet.packetOneofCase.Event)
-            {
-                var @event = packet.Event;
-
-                secondaryInfo = @event.ChangedObjectCase.ToString();
-                if (@event.ChangedObjectCase == Event.ChangedObjectOneofCase.user_updated_event)
-                {
-                    var user = @event.user_updated_event.User;
-                    secondaryInfo =
-                        $"{secondaryInfo} from ({user.Name} : {user.DownloadState}) : ({user.PlayState} : {user.StreamDelayMs})";
-                }
-                else if (@event.ChangedObjectCase == Event.ChangedObjectOneofCase.match_updated_event)
-                {
-                    var match = @event.match_updated_event.Match;
-                    secondaryInfo = $"{secondaryInfo} ({match.SelectedDifficulty})";
-                }
-            }
-
-            return $"({packet.packetCase}) ({secondaryInfo})";
+            return $"({packet.packetCase}): {secondaryInfo}";
         }
 
         #region EVENTS/ACTIONS
