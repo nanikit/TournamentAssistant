@@ -111,8 +111,7 @@ namespace TournamentAssistant.Behaviors
         public IEnumerator WaitForComponentCreation()
         {
             _coordinator = Resources.FindObjectsOfTypeAll<RoomCoordinator>().FirstOrDefault();
-            var match = _coordinator.Match;
-            UpdateAudience(match);
+            UpdateAudience(_coordinator.Match);
             Plugin.client.MatchInfoUpdated += Client_MatchInfoUpdated;
             //new string[] { "x_x" }; //Note to future moon, this will cause the server to receive the forwarding packet and forward it to no one. Since it's received, though, the scoreboard will get it if connected
 
@@ -142,11 +141,18 @@ namespace TournamentAssistant.Behaviors
 
         private void UpdateAudience(Match match)
         {
-            TournamentAssistantShared.Logger.Info($"Update audience by match GUID: {match.Guid}");
-            destinationUsers = ((bool)(_coordinator?.TournamentMode) && !Plugin.UseFloatingScoreboard)
-                ? match.AssociatedUsers.Where(x => Plugin.client.GetUserByGuid(x).ClientType != User.ClientTypes.Player).Select(x => Guid.Parse(x)).ToArray()
-                : match.AssociatedUsers.Select(x => Guid.Parse(x))
-                    .ToArray(); //We don't wanna be doing this every frame
+            TournamentAssistantShared.Logger.Info($"Update audience by match GUID: {match?.Guid}");
+            if (match == null)
+            {
+                destinationUsers = Array.Empty<Guid>();
+            }
+            else
+            {
+                destinationUsers = ((bool)(_coordinator?.TournamentMode) && !Plugin.UseFloatingScoreboard)
+                    ? match.AssociatedUsers.Where(x => Plugin.client.GetUserByGuid(x).ClientType != User.ClientTypes.Player).Select(x => Guid.Parse(x)).ToArray()
+                    : match.AssociatedUsers.Select(x => Guid.Parse(x))
+                        .ToArray(); //We don't wanna be doing this every frame
+            }
         }
 
         private Task Client_MatchInfoUpdated(Match match)
