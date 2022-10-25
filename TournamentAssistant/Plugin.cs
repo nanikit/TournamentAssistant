@@ -101,12 +101,14 @@ namespace TournamentAssistant
                         DisableFail = false;
                     }
 
-                    if (DisablePause) new GameObject("AntiPause").AddComponent<AntiPause>();
-                    else if
-                        (UseSync) //DisablePause will invoke UseSync after it's done to ensure they don't interfere with each other
+                    if (UseSync)
                     {
+                        // SyncHandler will add AntiPause
                         new GameObject("SyncHandler").AddComponent<SyncHandler>();
-                        UseSync = false;
+                    }
+                    else if (DisablePause)
+                    {
+                        new GameObject("AntiPause").AddComponent<AntiPause>();
                     }
 
                     var player = client.State.Users.FirstOrDefault(x => x.UserEquals(client.Self));
