@@ -11,13 +11,12 @@ namespace TournamentAssistantUI.UI
     /// </summary>
     public partial class App : Application
     {
-        private StreamWriter _logWriter;
+        private StreamWriter? _logWriter;
 
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
 
-            _logWriter = File.AppendText($"{DateTime.Now:yyMMdd-HHmmss.log}");
             SetupExceptionHandling();
         }
 
@@ -41,17 +40,21 @@ namespace TournamentAssistantUI.UI
 
         private void LogUnhandledException(Exception exception, string source)
         {
+            _logWriter ??= File.AppendText($"TournamentAssistantUI-{DateTime.Now:yyMMdd'.log'}");
             try
             {
-                string message = $"Unhandled exception ({source}) {exception}";
+                string message = $"[{DateTime.Now:O}] Unhandled exception ({source}) {exception}";
                 System.Reflection.AssemblyName assemblyName = System.Reflection.Assembly.GetExecutingAssembly().GetName();
-                message = string.Format("Unhandled exception in {0} v{1}", assemblyName.Name, assemblyName.Version);
                 _logWriter.WriteLine(message);
             }
             catch (Exception ex)
             {
                 string message = $"Exception of unhandled ({source}) {ex}";
                 _logWriter.WriteLine(message);
+            }
+            finally
+            {
+                _logWriter.Flush();
             }
         }
 
