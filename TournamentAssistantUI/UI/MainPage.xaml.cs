@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -38,6 +39,7 @@ namespace TournamentAssistantUI.UI
             }
         }
 
+        public ObservableCollection<User> Players { get; private set; } = new();
 
         public MainPage(string endpoint = null, int port = 2052, string username = null, string password = null)
         {
@@ -59,13 +61,59 @@ namespace TournamentAssistantUI.UI
             Client.MatchInfoUpdated += Client_MatchChanged;
             Client.MatchDeleted += Client_MatchChanged;
 
-            Client.UserConnected += Client_PlayerChanged;
+            Client.UserConnected += Client_UserConnected;
             Client.UserInfoUpdated += Client_PlayerChanged;
-            Client.UserDisconnected += Client_PlayerChanged;
+            Client.UserDisconnected += Client_UserDisconnected;
 
             Client.ConnectedToServer += Client_ConnectedToServer;
 
             RefreshUserBoxes();
+        }
+
+        private Task Client_UserConnected(User user)
+        {
+            return Dispatcher.InvokeAsync(() =>
+            {
+                switch (user.ClientType)
+                {
+                    case User.ClientTypes.Player:
+                        Players.Add(user);
+                        PlayerCountText.Text = $"Player Waiting Room ({Players.Count})";
+                        break;
+                    case User.ClientTypes.Coordinator:
+                        CoordinatorListBox.Items.Add(user);
+                        break;
+                }
+            }).Task;
+        }
+
+        private Task Client_PlayerChanged(User user)
+        {
+            return Dispatcher.InvokeAsync(() =>
+            {
+                var player = Players
+                    .Select((user, index) => (User: user, Index: index))
+                    .FirstOrDefault(x => x.User.Guid == user.Guid);
+                if (player is var (item, index))
+                {
+                    Players[index] = item;
+                }
+            }).Task;
+        }
+
+        private Task Client_UserDisconnected(User user)
+        {
+            return Dispatcher.InvokeAsync(() =>
+            {
+                var player = Players
+                    .Select((user, index) => (User: user, Index: index))
+                    .FirstOrDefault(x => x.User.Guid == user.Guid);
+                if (player is var (item, index) && item != null)
+                {
+                    Players.RemoveAt(index);
+                    PlayerCountText.Text = $"Player Waiting Room ({Players.Count})";
+                }
+            }).Task;
         }
 
         private Task Client_ConnectedToServer(Response.Connect _)
@@ -76,16 +124,7 @@ namespace TournamentAssistantUI.UI
 
         private Task Client_MatchChanged(Match _)
         {
-            Dispatcher.Invoke(() =>
-            {
-                MatchListBox.Items.Refresh();
-            });
-            return Task.CompletedTask;
-        }
-
-        private Task Client_PlayerChanged(User _)
-        {
-            RefreshUserBoxes();
+            Dispatcher.Invoke(MatchListBox.Items.Refresh);
             return Task.CompletedTask;
         }
 
@@ -94,21 +133,21 @@ namespace TournamentAssistantUI.UI
             //I've given up on bindnigs now that I need to filter a user list for each box. We're doing this instead since WPF was supposed to be a temporary solution anyway
             Dispatcher.Invoke(() =>
             {
-                PlayerListBox.Items.Clear();
+                Players.Clear();
                 CoordinatorListBox.Items.Clear();
 
                 if (Client?.State?.Users != null)
                 {
                     foreach (var player in Client.State.Users.Where(x => x.ClientType == User.ClientTypes.Player))
                     {
-                        PlayerListBox.Items.Add(player);
+                        Players.Add(player);
                     }
                     foreach (var coordinator in Client.State.Users.Where(x => x.ClientType == User.ClientTypes.Coordinator))
                     {
                         CoordinatorListBox.Items.Add(coordinator);
                     }
 
-                    PlayerCountText.Text = $"Player Waiting Room ({PlayerListBox.Items.Count})";
+                    PlayerCountText.Text = $"Player Waiting Room ({Players.Count})";
                 }
             });
         }
@@ -169,10 +208,20 @@ namespace TournamentAssistantUI.UI
             NavigateToMatchPage(matchItem.Match);
         }
 
-        private void NavigateToMatchPage(Match match)
+        private async void NavigateToMatchPage(Match match)
         {
-            var navigationService = NavigationService.GetNavigationService(this);
-            navigationService.Navigate(new MatchPage(match, this));
+            if (!IsLoaded)
+            {
+                var taskSource = new TaskCompletionSource<bool>();
+                void WaitLoad(object _source, RoutedEventArgs ev)
+                {
+                    taskSource.TrySetResult(true);
+                    Loaded -= WaitLoad;
+                }
+                Loaded += WaitLoad;
+                await taskSource.Task;
+            }
+            NavigationService?.Navigate(new MatchPage(match, this));
         }
 
         private void MatchListBox_PreviewMouseWheel(object sender, MouseWheelEventArgs e)

@@ -2,10 +2,11 @@
 using BeatSaberMarkupLanguage.FloatingScreen;
 using HMUI;
 using System;
-using System.Threading.Tasks;
+using System.Collections;
 using TournamentAssistant.Misc;
 using TournamentAssistant.UI.ViewControllers;
 using TournamentAssistantShared;
+using TournamentAssistantShared.Models;
 using UnityEngine;
 
 namespace TournamentAssistant.UI.FlowCoordinators
@@ -36,8 +37,30 @@ namespace TournamentAssistant.UI.FlowCoordinators
                 ProvideInitialViewControllers(_serverModeSelectionViewController, null, _patchNotesViewController);
 
                 //Check for updates before contacting a server
-                Task.Run(CheckForUpdate);
+                //Task.Run(CheckForUpdate);
+                StartCoroutine(EnterLocalServer());
             }
+        }
+
+        IEnumerator EnterLocalServer()
+        {
+            yield return new WaitUntil(() =>
+            {
+                return topViewController is ServerModeSelection && topViewController.isActivated &&
+                      !topViewController.isInTransition;
+            });
+            ServerModeSelectionViewController_TournamentButtonPressed();
+            yield return new WaitUntil(() =>
+            {
+                return _serverSelectionCoordinator?.topViewController is ServerSelection selector &&
+                       selector.isActivated && !selector.isInTransition;
+            });
+            _serverSelectionCoordinator.ConnectToServer(new CoreServer()
+            {
+                Address = "localhost",
+                Name = "localhost",
+                Port = 2052,
+            });
         }
 
         private async void CheckForUpdate()

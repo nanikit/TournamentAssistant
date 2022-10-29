@@ -46,7 +46,7 @@
                             <RowDefinition Height="*" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
-                        <ListBox x:Name="PlayerListBox" SelectionMode="Multiple" DisplayMemberPath="Name" />
+                        <ListBox x:Name="PlayerListBox" ItemsSource="{Binding Players}" SelectionMode="Multiple" DisplayMemberPath="Name" />
                         <materialDesign:ColorZone Mode="PrimaryMid" Grid.Row="1" Effect="{DynamicResource MaterialDesignShadowDepth5}">
                             <TextBlock x:Name="PlayerCountText" Margin="16" />
                         </materialDesign:ColorZone>

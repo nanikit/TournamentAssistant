@@ -928,7 +928,7 @@ namespace TournamentAssistantUI.UI
             MainPage.Client.UserInfoUpdated -= Connection_UserInfoUpdated;
 
             var navigationService = NavigationService.GetNavigationService(this);
-            navigationService.GoBack();
+            navigationService?.GoBack();
         }
 
         private bool ClosePage_CanExecute(object arg)

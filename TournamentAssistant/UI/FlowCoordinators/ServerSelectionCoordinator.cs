@@ -1,14 +1,18 @@
 ﻿using BeatSaberMarkupLanguage;
 using HMUI;
+using System;
+using System.Collections;
 using System.Linq;
 using TournamentAssistant.UI.ViewControllers;
 using TournamentAssistantShared.Models;
 using TournamentAssistantShared.Utilities;
+using UnityEngine;
 
 namespace TournamentAssistant.UI.FlowCoordinators
 {
     class ServerSelectionCoordinator : FlowCoordinatorWithScrapedInfo, IFinishableFlowCoordinator
     {
+        public event Action OnServerSelectionStart = delegate { };
         public FlowCoordinatorWithClient DestinationCoordinator { get; set; }
 
         private ServerSelection _serverSelectionViewController;
@@ -29,8 +33,16 @@ namespace TournamentAssistant.UI.FlowCoordinators
                 _splashScreen = BeatSaberUI.CreateViewController<SplashScreen>();
                 _splashScreen.StatusText = "Gathering Server List...";
 
+                ScrapedInfo = Plugin.config.GetHosts().ToDictionary(x => x, (_) => new State());
                 ProvideInitialViewControllers(_splashScreen, _IPConnectionViewController, _patchNotesViewController);
+                StartCoroutine(LoadInfo());
             }
+        }
+
+        IEnumerator LoadInfo()
+        {
+            yield return new WaitUntil(() => topViewController?.isActivated == true && !topViewController.isInTransition);
+            OnInfoScraped();
         }
 
         protected override void DidDeactivate(bool removedFromHierarchy, bool screenSystemDisabling)
@@ -51,7 +63,7 @@ namespace TournamentAssistant.UI.FlowCoordinators
             if (topViewController is IPConnection) DismissViewController(topViewController, immediately: true);
         }
 
-        private void ConnectToServer(CoreServer host)
+        public void ConnectToServer(CoreServer host)
         {
             DestinationCoordinator.DidFinishEvent += DestinationCoordinator_DidFinishEvent;
             DestinationCoordinator.Host = host;
