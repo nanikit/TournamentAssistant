@@ -15,6 +15,7 @@ using TournamentAssistantShared.Utilities;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Config = TournamentAssistantShared.Config;
+using IPA.Utilities.Async;
 
 /**
  * Created by Moon on 8/5/2019
@@ -180,7 +181,15 @@ namespace TournamentAssistant
             _mainFlowCoordinator.DismissFlowCoordinator(_modeSelectionCoordinator);
         }
 
-        public static bool IsInMenu() => SceneManager.GetActiveScene().name == "MainMenu";
+        public static bool IsInMenu()
+        {
+            var task = UnityMainThreadTaskScheduler.Factory.StartNew(() =>
+            {
+                return SceneManager.GetActiveScene().name == "MainMenu";
+            });
+            task.Wait();
+            return task.Result;
+        }
         public void Dispose()
         {
             if (MenuButtons.IsSingletonAvailable && MenuButtons.instance)

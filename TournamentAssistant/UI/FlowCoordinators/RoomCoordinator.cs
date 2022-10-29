@@ -435,7 +435,7 @@ namespace TournamentAssistant.UI.FlowCoordinators
                         .ToList();
                     if (coordinators.Count == 0)
                     {
-                        SetBackButtonInteractivity(true);
+                        _ = SetBackButtonInteractivity(true);
                     }
                 }
 
@@ -467,10 +467,13 @@ namespace TournamentAssistant.UI.FlowCoordinators
             }
         }
 
-        private void SetBackButtonInteractivity(bool enable)
+        private Task SetBackButtonInteractivity(bool enable)
         {
-            var screenSystem = this.GetField<ScreenSystem>("_screenSystem", typeof(FlowCoordinator));
-            screenSystem.GetField<Button>("_backButton").interactable = enable;
+            return UnityMainThreadTaskScheduler.Factory.StartNew(() =>
+            {
+                var screenSystem = this.GetField<ScreenSystem>("_screenSystem", typeof(FlowCoordinator));
+                screenSystem.GetField<Button>("_backButton").interactable = enable;
+            });
         }
 
         protected override async Task Client_MatchDeleted(Match match)
@@ -496,7 +499,7 @@ namespace TournamentAssistant.UI.FlowCoordinators
             }
             else
             {
-                SetBackButtonInteractivity(true);
+                _ = SetBackButtonInteractivity(true);
                 //If the player is in-game... boot them out... Yeah.
                 //Harsh, but... Expected functionality
                 //IN-TESTING: Temporarily disabled. Too many matches being accidentally ended by curious coordinators
